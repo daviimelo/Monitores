@@ -1,8 +1,8 @@
 package org.example.view.screens;
 
 import jakarta.mail.MessagingException;
-import org.example.util.Mensageiro;
 import org.example.exception.CampoVazioException;
+import org.example.facade.ComunicacaoFacade; // Import da Fachada
 import org.example.model.Aluno;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoPrimario;
@@ -20,6 +20,10 @@ import java.awt.*;
 public class TelaContatoCoordenador extends BaseTela {
 
     private Aluno aluno;
+
+    // Fachada de Comunicação
+    private ComunicacaoFacade comunicacaoFacade;
+
     private InputTexto campoDestinatario;
     private InputTexto campoAssunto;
     private JTextArea campoMensagem;
@@ -31,6 +35,10 @@ public class TelaContatoCoordenador extends BaseTela {
     public TelaContatoCoordenador(Aluno aluno) {
         super("Contatar Estudante", 500, 500);
         this.aluno = aluno;
+
+        // Inicializa a fachada
+        this.comunicacaoFacade = new ComunicacaoFacade();
+
         initView();
         preencherDados();
     }
@@ -81,7 +89,8 @@ public class TelaContatoCoordenador extends BaseTela {
                 btnEnviar.setText("Enviando...");
                 btnEnviar.setEnabled(false);
 
-                Mensageiro.enviarEmail(aluno.getEmail(), assunto, mensagem);
+                // Chamada via Fachada
+                comunicacaoFacade.enviarEmail(aluno.getEmail(), assunto, mensagem);
 
                 JOptionPane.showMessageDialog(this, "E-mail enviado com sucesso para " + aluno.getNome() + "!");
                 dispose();

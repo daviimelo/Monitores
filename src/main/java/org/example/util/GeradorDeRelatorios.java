@@ -3,9 +3,9 @@ package org.example.util;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
+import org.example.facade.InscricaoFacade; // Substituindo Service pela Fachada
 import org.example.model.Disciplina;
 import org.example.model.Inscricao;
-import org.example.service.InscricaoService;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -14,10 +14,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class GeradorDeRelatorios {
-    private final InscricaoService inscricaoService;
 
-    public GeradorDeRelatorios(InscricaoService inscricaoService) {
-        this.inscricaoService = inscricaoService;
+    private final InscricaoFacade inscricaoFacade;
+
+    // Construtor agora exige a Fachada
+    public GeradorDeRelatorios(InscricaoFacade inscricaoFacade) {
+        this.inscricaoFacade = inscricaoFacade;
     }
 
     public void gerarPdfEdital(List<Inscricao> listaInscricoes) throws FileNotFoundException {
@@ -42,7 +44,6 @@ public class GeradorDeRelatorios {
                 nomeDisciplina.setSpacingBefore(10);
                 documento.add(nomeDisciplina);
 
-                // Criando a tabela iText
                 PdfPTable tabela = new PdfPTable(6);
                 tabela.setWidthPercentage(100);
                 tabela.setSpacingBefore(5);
@@ -55,22 +56,20 @@ public class GeradorDeRelatorios {
                 tabela.addCell("Pontuação");
                 tabela.addCell("Status");
 
-                // Chamando o service
-                List<Inscricao> inscricoesDisciplina = inscricaoService.processarResultadoDaDisciplina(disciplina);
+                // Chamando a fachada
+                List<Inscricao> inscricoesDisciplina = inscricaoFacade.processarResultadoDisciplina(disciplina);
 
-                for (Inscricao e : inscricoesDisciplina) {
-                    double pontuacao = CalcularPontuacao.calcularPontuacaoAluno(
-                            e.getDisciplina().getEdital().getPesoCre(),
-                            e.getDisciplina().getEdital().getPesoMedia(),
-                            e.getAlunoCRE(),
-                            e.getAlunoMedia()
-                    );
+                for (int i = 0; i < inscricoesDisciplina.size(); i++) {
+                    Inscricao e = inscricoesDisciplina.get(i);
 
-                    tabela.addCell((inscricoesDisciplina.indexOf(e) + 1) + "º");
+                    // Chamando a fachada
+                    double pontuacao = inscricaoFacade.calcularPontuacao(e);
+
+                    tabela.addCell((i + 1) + "º");
                     tabela.addCell(e.getAluno().getNome());
                     tabela.addCell(String.valueOf(e.getAlunoCRE()));
                     tabela.addCell(String.valueOf(e.getAlunoMedia()));
-                    tabela.addCell(String.valueOf(pontuacao));
+                    tabela.addCell(String.format("%.2f", pontuacao)); // Formatado com 2 casas
                     tabela.addCell(String.valueOf(e.getResultadoInscricao()).toLowerCase());
                 }
 

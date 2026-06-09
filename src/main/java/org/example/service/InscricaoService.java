@@ -4,12 +4,12 @@ import org.example.enums.ResultadoInscricao;
 import org.example.enums.StatusEdital;
 import org.example.exception.AlunoJaInscritoException;
 import org.example.exception.InscricaoInvalida;
+import org.example.interfaces.IEstrategiaPontuacao;
 import org.example.interfaces.IInscricaoRepository;
 import org.example.model.Aluno;
 import org.example.model.Disciplina;
 import org.example.model.Edital;
 import org.example.model.Inscricao;
-import org.example.util.CalcularPontuacao;
 import org.example.validator.EditalValidator;
 
 import java.time.LocalDateTime;
@@ -19,9 +19,15 @@ import java.util.List;
 public class InscricaoService {
 
     private final IInscricaoRepository inscricaoRepository;
+    private final IEstrategiaPontuacao estrategiaPontuacao;
 
-    public InscricaoService (IInscricaoRepository inscricaoRepository) {
+    public InscricaoService (IInscricaoRepository inscricaoRepository, IEstrategiaPontuacao estrategiaPontuacao) {
         this.inscricaoRepository = inscricaoRepository;
+        this.estrategiaPontuacao = estrategiaPontuacao;
+    }
+
+    public double calcularPontuacao(Inscricao inscricao) {
+        return estrategiaPontuacao.calcular(inscricao);
     }
 
     public void criarInscricao (Aluno aluno, Disciplina disciplina, Double cre, Double media) throws InscricaoInvalida, AlunoJaInscritoException {
@@ -86,27 +92,15 @@ public class InscricaoService {
                     !b.getResultadoInscricao().equals(ResultadoInscricao.DESISTENTE)) {
                 return 1;
             }
-
             if (b.getResultadoInscricao().equals(ResultadoInscricao.DESISTENTE) &&
                     !a.getResultadoInscricao().equals(ResultadoInscricao.DESISTENTE)) {
                 return -1;
             }
 
-            double pontuacao1 = CalcularPontuacao.calcularPontuacaoAluno(
-                    a.getDisciplina().getEdital().getPesoCre(),
-                    a.getDisciplina().getEdital().getPesoMedia(),
-                    a.getAlunoCRE(),
-                    a.getAlunoMedia()
-            );
+            double pontuacaoA = calcularPontuacao(a);
+            double pontuacaoB = calcularPontuacao(b);
 
-            double pontuacao2 = CalcularPontuacao.calcularPontuacaoAluno(
-                    b.getDisciplina().getEdital().getPesoCre(),
-                    b.getDisciplina().getEdital().getPesoMedia(),
-                    b.getAlunoCRE(),
-                    b.getAlunoMedia()
-            );
-
-            return Double.compare(pontuacao2, pontuacao1);
+            return Double.compare(pontuacaoB, pontuacaoA);
         });
     }
 

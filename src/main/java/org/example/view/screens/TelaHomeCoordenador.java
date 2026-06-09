@@ -1,23 +1,25 @@
 package org.example.view.screens;
 
 import org.example.enums.StatusEdital;
-import org.example.interfaces.IEditalRepository;
+import org.example.facade.EditalFacade;
 import org.example.model.Edital;
-import org.example.repository.EditalRepository;
-import org.example.service.EditalService;
 import org.example.view.components.header.BarraSuperior;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.tables.ModeloTabelaEdital;
 import org.example.view.components.tables.TabelaPadrao;
 import org.example.view.components.links.LinkTexto;
+import org.example.observer.EditalObserver;
+import org.example.observer.EditalEventManager;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.List;
 
-public class TelaHomeCoordenador extends BaseTela {
+public class TelaHomeCoordenador extends BaseTela implements EditalObserver {
 
     private BarraSuperior header;
     private List<Edital> listaEditais;
@@ -25,30 +27,51 @@ public class TelaHomeCoordenador extends BaseTela {
     private TabelaPadrao tabelaEditais;
     private JScrollPane scrollPane;
     private LinkTexto linkCadastroEdital;
-    private EditalService editalService;
+
+    // Fachada de Edital
+    private EditalFacade editalFacade;
 
     public TelaHomeCoordenador() {
         super("Home Coordenador", 600, 750);
         getContentPane().setBackground(Color.WHITE);
+
+        // Inicializa a fachada
+        this.editalFacade = new EditalFacade();
+
+        EditalEventManager.getInstance().inscrever(this);
+
         initView();
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                EditalEventManager.getInstance().desinscrever(TelaHomeCoordenador.this);
+            }
+        });
+    }
+
+    @Override
+    public void onEditalAlterado() {
+        // Busca a lista atualizada no banco e atualiza a tabela na tela
+        this.listaEditais = editalFacade.retornarEditais();
+        this.tabelaEditais.setModel(new ModeloTabelaEdital(this.listaEditais));
+        this.tabelaEditais.transformarColunaEmLink(4, new Color(0, 102, 204));
+        this.tabelaEditais.repaint();
     }
 
     @Override
     public void initComponents() {
-
-        IEditalRepository editalRepo = new EditalRepository();
-        editalService = new EditalService(editalRepo);
-
         header = new BarraSuperior( "Coordenador", true,
-                () -> { dispose(); new TelaLogin(); },
-                () -> { dispose(); new TelaListarAlunos(); }
+                () -> { dispose(); new TelaLogin().setVisible(true); },
+                () -> { dispose(); new TelaListarAlunos().setVisible(true); }
         );
 
         labelTituloSecao = new JLabel("Gerenciamento de Editais");
         labelTituloSecao.setFont(new Font("Arial", Font.BOLD, 18));
         labelTituloSecao.setForeground(new Color(30, 30, 30));
 
-        listaEditais = editalService.retornarEditais();
+        // Chamada via Fachada
+        listaEditais = editalFacade.retornarEditais();
 
         tabelaEditais = new TabelaPadrao(new ModeloTabelaEdital(listaEditais));
         tabelaEditais.transformarColunaEmLink(4, new Color(0, 102, 204));
@@ -66,7 +89,7 @@ public class TelaHomeCoordenador extends BaseTela {
             @Override
             public void mouseClicked(MouseEvent e) {
                 dispose();
-                new TelaCadastroEdital();
+                new TelaCadastroEdital().setVisible(true);
             }
         });
 

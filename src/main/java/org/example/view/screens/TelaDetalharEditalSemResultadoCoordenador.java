@@ -1,16 +1,11 @@
 package org.example.view.screens;
 
 import org.example.enums.StatusEdital;
-import org.example.interfaces.IEditalRepository;
-import org.example.interfaces.IInscricaoRepository;
+import org.example.facade.EditalFacade;
+import org.example.facade.InscricaoFacade;
 import org.example.model.Disciplina;
 import org.example.model.Edital;
 import org.example.model.Inscricao;
-import org.example.repository.EditalRepository;
-import org.example.repository.InscricaoRepository;
-import org.example.service.EditalService;
-import org.example.service.InscricaoService;
-import org.example.util.CalcularPontuacao;
 import org.example.validator.EditalValidator;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoPrimario;
@@ -38,8 +33,10 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
     private InputData campoDataInicio, campoDataFim;
     private InputTexto campoMaxInscricoes, campoPesoCre, campoPesoMedia;
     private Edital edital;
-    private EditalService editalService;
-    private InscricaoService inscricaoService;
+
+    private EditalFacade editalFacade;
+    private InscricaoFacade inscricaoFacade;
+
     private TabelaPadrao tabelaDisciplinas;
     private TabelaPadrao tabelaAlunos;
     private DefaultTableModel modelDisc;
@@ -56,11 +53,8 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
         super("Detalhes do Edital", 600, 750);
         this.edital = edital;
 
-        IInscricaoRepository incricaoRepo = new InscricaoRepository();
-        this.inscricaoService = new InscricaoService(incricaoRepo);
-
-        IEditalRepository editalRepo = new EditalRepository();
-        editalService = new EditalService(editalRepo);
+        this.editalFacade = new EditalFacade();
+        this.inscricaoFacade = new InscricaoFacade();
 
         initView();
     }
@@ -189,23 +183,26 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
     }
 
     public void carregarDadosTabelaInscricoes (Disciplina disciplina) {
-        listaInscricoes = inscricaoService.retornarInscricoesDaDisciplina(disciplina);
+        listaInscricoes = inscricaoFacade.retornarInscricoesDaDisciplina(disciplina);
         modelAlunos.setRowCount(0);
 
         if (!listaInscricoes.isEmpty()) {
-            listaInscricoes.forEach(e -> {
+            for (int i = 0; i < listaInscricoes.size(); i++) {
+                Inscricao e = listaInscricoes.get(i);
+                double pontuacao = inscricaoFacade.calcularPontuacao(e);
+
                 Object[] linha = {
-                    String.valueOf(listaInscricoes.indexOf(e) + 1),
-                    e.getAluno().getNome(),
-                    String.valueOf(e.getAlunoCRE()),
-                    String.valueOf(e.getAlunoMedia()),
-                    String.valueOf(CalcularPontuacao.calcularPontuacaoAluno(edital.getPesoCre(), edital.getPesoMedia(), e.getAlunoCRE(), e.getAlunoMedia())),
-                    String.valueOf(e.getResultadoInscricao()),
-                    "Contatar"
+                        (i + 1) + "º",
+                        e.getAluno().getNome(),
+                        String.valueOf(e.getAlunoCRE()),
+                        String.valueOf(e.getAlunoMedia()),
+                        String.format("%.2f", pontuacao),
+                        String.valueOf(e.getResultadoInscricao()),
+                        "Contatar"
                 };
 
                 modelAlunos.addRow(linha);
-            });
+            }
         }
     }
 
@@ -216,8 +213,9 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
                 telaContatoAberto.dispose();
             }
             dispose();
-            new TelaHomeCoordenador();
+            new TelaHomeCoordenador().setVisible(true);
         });
+
         btnEditar.addActionListener(e -> alternarModoEdicao(true));
 
         btnCancelarEdicao.addActionListener(e -> {
@@ -232,13 +230,13 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
         btnClonar.addActionListener(e -> {
             if (telaContatoAberto != null) telaContatoAberto.dispose();
             dispose();
-            new TelaCadastroEdital(edital);
+            new TelaCadastroEdital(edital).setVisible(true);
         });
 
         btnEncerrar.addActionListener(e -> {
             if (telaContatoAberto != null) telaContatoAberto.dispose();
             edital.setStatus(StatusEdital.ENCERRADO);
-            editalService.salvarEdital(edital);
+            editalFacade.salvarEdital(edital);
             JOptionPane.showMessageDialog(this, "Edital encerrado com sucesso!");
         });
 
@@ -246,14 +244,13 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
             try {
                 EditalValidator.validarCancelarEncerramentoEdital(edital.getDataFinal());
                 edital.setStatus(StatusEdital.ABERTO);
-                editalService.salvarEdital(edital);
+                editalFacade.salvarEdital(edital);
                 JOptionPane.showMessageDialog(this, "Cancelamento de encerramento de edital concluído!");
 
                 if (telaContatoAberto != null) telaContatoAberto.dispose();
                 dispose();
-                new TelaDetalharEditalSemResultadoCoordenador(edital);
+                new TelaDetalharEditalSemResultadoCoordenador(edital).setVisible(true);
             }
-
             catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.WARNING_MESSAGE);
             }
@@ -263,19 +260,19 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
             Object[] options = {"Sim", "Não"};
 
             int resposta = JOptionPane.showOptionDialog(
-                this,
-                "Tem certeza que deseja gerar resultado (não poderá mais editar este edital)?",
-                "Confirmação",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[0]
+                    this,
+                    "Tem certeza que deseja gerar resultado (não poderá mais editar este edital)?",
+                    "Confirmação",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    options,
+                    options[0]
             );
 
             if (resposta == JOptionPane.YES_OPTION) {
                 edital.setStatus(StatusEdital.RESULTADO_PRELIMINAR);
-                editalService.salvarEdital(edital);
+                editalFacade.salvarEdital(edital);
                 JOptionPane.showMessageDialog(this, "Resultado gerado com sucesso!");
                 if (telaContatoAberto != null) telaContatoAberto.dispose();
                 dispose();
@@ -294,8 +291,8 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
         tabelaAlunos.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-            int linha = tabelaAlunos.getSelectedRow();
-            int coluna = tabelaAlunos.getSelectedColumn();
+                int linha = tabelaAlunos.getSelectedRow();
+                int coluna = tabelaAlunos.getSelectedColumn();
 
                 if (linha >= 0 && coluna == 6) {
                     if (telaContatoAberto != null && telaContatoAberto.isVisible()) {
@@ -414,7 +411,7 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
             edital.setDataInicio(dataInicio);
             edital.setDataFinal(dataFinal);
 
-            editalService.salvarEdital(edital);
+            editalFacade.salvarEdital(edital);
             carregarValoresComponents();
             alternarModoEdicao(false);
 
@@ -426,5 +423,4 @@ public class TelaDetalharEditalSemResultadoCoordenador extends BaseTela {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.WARNING_MESSAGE);
         }
     }
-
 }

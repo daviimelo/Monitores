@@ -1,13 +1,7 @@
 package org.example.view.screens;
 
+import org.example.facade.UsuarioFacade;
 import org.example.model.Aluno;
-import org.example.service.AlunoService;
-
-import org.example.interfaces.IAlunoRepository;
-import org.example.interfaces.ICoordenadorRepository;
-import org.example.repository.AlunoRepository;
-import org.example.repository.CoordenadorRepository;
-
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoPrimario;
 import org.example.view.components.buttons.BotaoSecundario;
@@ -27,7 +21,6 @@ import java.util.stream.Collectors;
 public class TelaListarAlunos extends BaseTela {
 
     private LabelTitulo titulo;
-
     private LabelTexto lblNome;
     private InputTexto campoBuscaNome;
     private BotaoPrimario btnBuscar;
@@ -37,20 +30,16 @@ public class TelaListarAlunos extends BaseTela {
     private DefaultTableModel modelAlunos;
     private JScrollPane scrollPane;
 
-    private AlunoService alunoService;
+    private UsuarioFacade usuarioFacade; // Fachada de Usuários
     private List<Aluno> listaCompletaAlunos;
 
     public TelaListarAlunos() {
         super("Listagem de Alunos", 600, 750);
         getContentPane().setBackground(Color.WHITE);
 
-        IAlunoRepository alunoRepo = new AlunoRepository();
-        ICoordenadorRepository coordRepo = new CoordenadorRepository();
-
-        // 2. Passamos as dependências prontas para o Service
-        alunoService = new AlunoService(alunoRepo, coordRepo);
-
-        listaCompletaAlunos = alunoService.retornarAlunos();
+        this.usuarioFacade = new UsuarioFacade();
+        // A Fachada centraliza o acesso ao serviço de alunos
+        listaCompletaAlunos = usuarioFacade.retornarAlunos();
 
         initView();
         carregarTabela("");
@@ -59,7 +48,6 @@ public class TelaListarAlunos extends BaseTela {
     @Override
     public void initComponents() {
         titulo = new LabelTitulo("Alunos Existentes");
-
         lblNome = new LabelTexto("Nome do Aluno:");
         campoBuscaNome = new InputTexto();
 
@@ -88,7 +76,7 @@ public class TelaListarAlunos extends BaseTela {
     public void initListeners() {
         btnVoltar.addActionListener(e -> {
             dispose();
-            new TelaHomeCoordenador();
+            new TelaHomeCoordenador().setVisible(true);
         });
 
         btnBuscar.addActionListener(e -> {
@@ -104,7 +92,6 @@ public class TelaListarAlunos extends BaseTela {
 
                 if (linha >= 0 && coluna == 3) {
                     String matricula = (String) modelAlunos.getValueAt(linha, 1);
-
                     Aluno alunoSelecionado = encontrarAlunoPorMatricula(matricula);
 
                     if (alunoSelecionado != null) {

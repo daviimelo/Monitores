@@ -1,16 +1,11 @@
 package org.example.view.screens;
 
 import org.example.enums.StatusEdital;
-import org.example.interfaces.IEditalRepository;
-import org.example.interfaces.IInscricaoRepository;
+import org.example.facade.EditalFacade;
+import org.example.facade.InscricaoFacade;
 import org.example.model.Disciplina;
 import org.example.model.Edital;
 import org.example.model.Inscricao;
-import org.example.repository.EditalRepository;
-import org.example.repository.InscricaoRepository;
-import org.example.service.EditalService;
-import org.example.service.InscricaoService;
-import org.example.util.CalcularPontuacao;
 import org.example.util.GeradorDeRelatorios;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoPrimario;
@@ -29,8 +24,10 @@ import java.util.List;
 public class TelaDetalharEditalComResultadoCoordenador extends BaseTela {
 
     private Edital edital;
-    private InscricaoService inscricaoService;
-    private EditalService editalService;
+
+    // Nossas Fachadas Substituindo os Services
+    private InscricaoFacade inscricaoFacade;
+    private EditalFacade editalFacade;
 
     private InputComboBox<Disciplina> comboDisciplinas;
     private TabelaPadrao tabelaAlunos;
@@ -44,11 +41,9 @@ public class TelaDetalharEditalComResultadoCoordenador extends BaseTela {
         super("Resultado do Edital", 700, 800);
         this.edital = edital;
 
-        IInscricaoRepository incricaoRepo = new InscricaoRepository();
-        this.inscricaoService = new InscricaoService(incricaoRepo);
-
-        IEditalRepository editalRepo = new EditalRepository();
-        editalService = new EditalService(editalRepo);
+        // Inicializando as Fachadas
+        this.inscricaoFacade = new InscricaoFacade();
+        this.editalFacade = new EditalFacade();
 
         if (comboDisciplinas == null) {
             initComponents();
@@ -129,7 +124,9 @@ public class TelaDetalharEditalComResultadoCoordenador extends BaseTela {
 
             if (resposta == JOptionPane.YES_OPTION) {
                 edital.setStatus(StatusEdital.RESULTADO_FINAL);
-                editalService.salvarEdital(edital);
+
+                // Chamada via Fachada
+                editalFacade.salvarEdital(edital);
 
                 JOptionPane.showMessageDialog(this, "Resultado Final Lançado com Sucesso!");
                 dispose();
@@ -138,10 +135,12 @@ public class TelaDetalharEditalComResultadoCoordenador extends BaseTela {
         });
 
         btnGerarPdf.addActionListener(e -> {
-            List<Inscricao> listaInscricoesDoEdital = inscricaoService.retornarInscricoesEdital(edital);
+            // Chamada via Fachada
+            List<Inscricao> listaInscricoesDoEdital = inscricaoFacade.retornarInscricoesEdital(edital);
 
             try {
-                GeradorDeRelatorios gerador = new GeradorDeRelatorios(this.inscricaoService);
+                // Passando a Fachada para o Gerador de Relatórios
+                GeradorDeRelatorios gerador = new GeradorDeRelatorios(this.inscricaoFacade);
                 gerador.gerarPdfEdital(listaInscricoesDoEdital);
 
                 JOptionPane.showMessageDialog(this, "Relatório gerado!");
@@ -152,19 +151,16 @@ public class TelaDetalharEditalComResultadoCoordenador extends BaseTela {
     }
 
     private void carregarTabelaAlunos(Disciplina disciplina) {
-        List<Inscricao> listaInscricoes = inscricaoService.processarResultadoDaDisciplina(disciplina);
+        // Chamada via Fachada
+        List<Inscricao> listaInscricoes = inscricaoFacade.processarResultadoDisciplina(disciplina);
         modelAlunos.setRowCount(0);
 
         if (!listaInscricoes.isEmpty()) {
             for (int i = 0; i < listaInscricoes.size(); i++) {
                 Inscricao inscricao = listaInscricoes.get(i);
 
-                double pontuacao = CalcularPontuacao.calcularPontuacaoAluno(
-                        edital.getPesoCre(),
-                        edital.getPesoMedia(),
-                        inscricao.getAlunoCRE(),
-                        inscricao.getAlunoMedia()
-                );
+                // Chamada via Fachada
+                double pontuacao = inscricaoFacade.calcularPontuacao(inscricao);
 
                 Object[] linha = {
                         (i + 1) + "º",

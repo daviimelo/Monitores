@@ -1,11 +1,7 @@
 package org.example.view.screens;
 
 import org.example.exception.*;
-import org.example.interfaces.IAlunoRepository;
-import org.example.interfaces.ICoordenadorRepository;
-import org.example.repository.AlunoRepository;
-import org.example.repository.CoordenadorRepository;
-import org.example.service.CoordenadorService;
+import org.example.facade.UsuarioFacade; // Importando a Fachada
 import org.example.validator.ComponentValidator;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoPrimario;
@@ -18,19 +14,19 @@ import javax.swing.*;
 
 public class TelaCadastroCoordenador extends BaseTela {
 
-    private LabelTitulo titulo; // Componente Novo
+    private LabelTitulo titulo;
     private InputTexto campoEmail;
     private InputSenha campoSenha;
     private BotaoPrimario btnCadastrar;
-    private CoordenadorService coordenadorService;
+
+    // Substituindo o Service pela Fachada
+    private UsuarioFacade usuarioFacade;
 
     public TelaCadastroCoordenador() {
         super("Cadastro de Coordenador", 400, 500);
 
-        IAlunoRepository alunoRepo = new AlunoRepository();
-        ICoordenadorRepository coordRepo = new CoordenadorRepository();
-
-        coordenadorService = new CoordenadorService(alunoRepo, coordRepo);
+        // Inicializando a Fachada
+        this.usuarioFacade = new UsuarioFacade();
         initView();
     }
 
@@ -54,11 +50,12 @@ public class TelaCadastroCoordenador extends BaseTela {
                 ComponentValidator.validarEmail(email);
                 ComponentValidator.validarSenha(senha);
 
-                coordenadorService.cadastrarCoordenador(email, senha);
+                // Chamada via Fachada
+                usuarioFacade.cadastrarCoordenador(email, senha);
 
                 JOptionPane.showMessageDialog(this, "Cadastro de coordenador concluído!");
                 dispose();
-                new TelaLogin();
+                new TelaLogin().setVisible(true);
             } catch (CampoTamanhoInvalidoException | CampoVazioException |
                      CampoInvalidoException | UsuarioJaExisteException exception) {
                 JOptionPane.showMessageDialog(this, exception.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);

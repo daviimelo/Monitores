@@ -2,14 +2,11 @@ package org.example.view.screens;
 
 import org.example.enums.ResultadoInscricao;
 import org.example.enums.StatusEdital;
-import org.example.interfaces.IInscricaoRepository;
+import org.example.facade.InscricaoFacade;
 import org.example.model.Aluno;
 import org.example.model.Disciplina;
 import org.example.model.Edital;
 import org.example.model.Inscricao;
-import org.example.repository.InscricaoRepository;
-import org.example.service.InscricaoService;
-import org.example.util.CalcularPontuacao;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoSecundario;
 import org.example.view.components.input.InputComboBox;
@@ -29,7 +26,9 @@ public class TelaDetalharEditalComResultadoAluno extends BaseTela {
 
     private Edital edital;
     private Aluno aluno;
-    private InscricaoService inscricaoService;
+
+    // Substituindo o Service pela Fachada
+    private InscricaoFacade inscricaoFacade;
 
     private InputComboBox<Disciplina> comboDisciplinas;
     private TabelaPadrao tabelaAlunos;
@@ -44,8 +43,8 @@ public class TelaDetalharEditalComResultadoAluno extends BaseTela {
         this.edital = edital;
         this.aluno = aluno;
 
-        IInscricaoRepository incricaoRepo = new InscricaoRepository();
-        this.inscricaoService = new InscricaoService(incricaoRepo);
+        // Inicializando a Fachada
+        this.inscricaoFacade = new InscricaoFacade();
 
         if (comboDisciplinas == null) {
             initView();
@@ -57,7 +56,6 @@ public class TelaDetalharEditalComResultadoAluno extends BaseTela {
     @Override
     public void initComponents() {
         comboDisciplinas = new InputComboBox<>();
-
         comboDisciplinas.addItem(null);
 
         String[] colAlunos = {"Pos.", "Aluno", "CRE", "Média", "Pontuação", "Status"};
@@ -122,9 +120,10 @@ public class TelaDetalharEditalComResultadoAluno extends BaseTela {
                 if (resposta == JOptionPane.YES_OPTION) {
                     Disciplina disciplinaSelecionada = (Disciplina) comboDisciplinas.getSelectedItem();
                     try {
-                        inscricaoService.desistirInscricao(aluno, disciplinaSelecionada);
-                        JOptionPane.showMessageDialog(TelaDetalharEditalComResultadoAluno.this, "Desistência registrada com sucesso.");
+                        // Chamada via Fachada
+                        inscricaoFacade.desistirVagaMonitoria(aluno, disciplinaSelecionada);
 
+                        JOptionPane.showMessageDialog(TelaDetalharEditalComResultadoAluno.this, "Desistência registrada com sucesso.");
                         carregarTabelaAlunos(disciplinaSelecionada);
                     } catch (Exception ex) {
                         JOptionPane.showMessageDialog(TelaDetalharEditalComResultadoAluno.this, "Erro ao desistir: " + ex.getMessage());
@@ -135,7 +134,8 @@ public class TelaDetalharEditalComResultadoAluno extends BaseTela {
     }
 
     private void carregarTabelaAlunos(Disciplina disciplina) {
-        List<Inscricao> listaInscricoes = inscricaoService.processarResultadoDaDisciplina(disciplina);
+        // Chamada via Fachada
+        List<Inscricao> listaInscricoes = inscricaoFacade.processarResultadoDisciplina(disciplina);
         modelAlunos.setRowCount(0);
         linkDesistir.setVisible(false);
 
@@ -143,12 +143,8 @@ public class TelaDetalharEditalComResultadoAluno extends BaseTela {
             for (int i = 0; i < listaInscricoes.size(); i++) {
                 Inscricao inscricao = listaInscricoes.get(i);
 
-                double pontuacao = CalcularPontuacao.calcularPontuacaoAluno(
-                        edital.getPesoCre(),
-                        edital.getPesoMedia(),
-                        inscricao.getAlunoCRE(),
-                        inscricao.getAlunoMedia()
-                );
+                // Chamada via Fachada
+                double pontuacao = inscricaoFacade.calcularPontuacao(inscricao);
 
                 boolean isAlunoLogado = inscricao.getAluno().getEmail().equals(aluno.getEmail());
 
@@ -161,12 +157,12 @@ public class TelaDetalharEditalComResultadoAluno extends BaseTela {
                 }
 
                 Object[] linha = {
-                    (i + 1) + "º",
-                    nomeAluno,
-                    inscricao.getAlunoCRE(),
-                    inscricao.getAlunoMedia(),
-                    String.format("%.2f", pontuacao),
-                    inscricao.getResultadoInscricao()
+                        (i + 1) + "º",
+                        nomeAluno,
+                        inscricao.getAlunoCRE(),
+                        inscricao.getAlunoMedia(),
+                        String.format("%.2f", pontuacao),
+                        inscricao.getResultadoInscricao()
                 };
                 modelAlunos.addRow(linha);
             }

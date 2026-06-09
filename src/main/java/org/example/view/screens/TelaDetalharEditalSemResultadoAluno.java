@@ -3,12 +3,10 @@ package org.example.view.screens;
 import org.example.exception.AlunoJaInscritoException;
 import org.example.exception.InscricaoInvalida;
 import org.example.exception.NumeroInvalidoException;
-import org.example.interfaces.IInscricaoRepository;
+import org.example.facade.InscricaoFacade;
 import org.example.model.Aluno;
 import org.example.model.Disciplina;
 import org.example.model.Edital;
-import org.example.repository.InscricaoRepository;
-import org.example.service.InscricaoService;
 import org.example.validator.InscricaoValidator;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoSecundario;
@@ -29,7 +27,9 @@ public class TelaDetalharEditalSemResultadoAluno extends BaseTela {
 
     private Edital edital;
     private Aluno aluno;
-    private InscricaoService inscricaoService;
+
+    // Substituindo o Service pela Fachada
+    private InscricaoFacade inscricaoFacade;
 
     private InputTexto campoDataInicio, campoDataFim, campoMaxInscricoes;
     private InputTexto campoPesoCre, campoPesoMedia;
@@ -47,8 +47,8 @@ public class TelaDetalharEditalSemResultadoAluno extends BaseTela {
         this.edital = edital;
         this.aluno = aluno;
 
-        IInscricaoRepository incricaoRepo = new InscricaoRepository();
-        this.inscricaoService = new InscricaoService(incricaoRepo);
+        // Inicializando a Fachada
+        this.inscricaoFacade = new InscricaoFacade();
 
         initView();
 
@@ -105,10 +105,10 @@ public class TelaDetalharEditalSemResultadoAluno extends BaseTela {
         List<Disciplina> lista = edital.getListaDisciplinas();
         if (lista != null) {
             lista.forEach(d -> modelDisciplina.addRow(new Object[]{
-                d.getNomeDisciplina(),
-                d.getVagasRemunerada(),
-                d.getVagasVoluntarias(),
-                "Inscrever-se"
+                    d.getNomeDisciplina(),
+                    d.getVagasRemunerada(),
+                    d.getVagasVoluntarias(),
+                    "Inscrever-se"
             }));
         }
     }
@@ -151,7 +151,8 @@ public class TelaDetalharEditalSemResultadoAluno extends BaseTela {
             InscricaoValidator.validarNota(cre);
             InscricaoValidator.validarNota(media);
 
-            inscricaoService.criarInscricao(aluno, disciplina, cre, media);
+            // Chamada via Fachada
+            inscricaoFacade.criarInscricao(aluno, disciplina, cre, media);
 
             JOptionPane.showMessageDialog(this, "Inscrição realizada com sucesso!");
         } catch (InscricaoInvalida | NumeroInvalidoException | AlunoJaInscritoException ex) {

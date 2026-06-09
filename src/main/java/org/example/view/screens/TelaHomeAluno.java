@@ -1,13 +1,13 @@
 package org.example.view.screens;
 
 import org.example.enums.StatusEdital;
-import org.example.interfaces.IEditalRepository;
+import org.example.facade.EditalFacade;
 import org.example.model.Aluno;
 import org.example.model.Edital;
-import org.example.repository.EditalRepository;
-import org.example.service.EditalService;
-import org.example.view.components.base.BaseTela;
+import org.example.observer.EditalObserver; // Importando o Observer
+import org.example.observer.EditalEventManager; // Importando o Manager
 import org.example.view.components.header.BarraSuperior;
+import org.example.view.components.base.BaseTela;
 import org.example.view.components.tables.ModeloTabelaEdital;
 import org.example.view.components.tables.TabelaPadrao;
 
@@ -15,31 +15,52 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.List;
 
-public class TelaHomeAluno extends BaseTela {
+public class TelaHomeAluno extends BaseTela implements EditalObserver {
 
     private BarraSuperior header;
-    List<Edital> listaEditais;
+    private List<Edital> listaEditais;
     private JLabel labelTituloSecao;
     private TabelaPadrao tabelaEditais;
     private JScrollPane scrollPane;
-    private EditalService editalService;
+    private EditalFacade editalFacade;
     private Aluno aluno;
 
     public TelaHomeAluno(Aluno aluno) {
         super("Home Aluno", 600, 750);
         getContentPane().setBackground(Color.WHITE);
         this.aluno = aluno;
+
+        this.editalFacade = new EditalFacade();
+
+        // Se inscreve para ouvir mudanças nos editais
+        EditalEventManager.getInstance().inscrever(this);
+
         initView();
+
+        // Garante que a tela pare de ouvir quando for fechada
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                EditalEventManager.getInstance().desinscrever(TelaHomeAluno.this);
+            }
+        });
+    }
+
+    // Método que roda automaticamente quando algo muda no banco via Facade
+    @Override
+    public void onEditalAlterado() {
+        this.listaEditais = editalFacade.retornarEditais();
+        this.tabelaEditais.setModel(new ModeloTabelaEdital(this.listaEditais));
+        this.tabelaEditais.transformarColunaEmLink(4, new Color(0, 102, 204));
+        this.tabelaEditais.repaint();
     }
 
     @Override
     public void initComponents() {
-
-        IEditalRepository editalRepo = new EditalRepository();
-        editalService = new EditalService(editalRepo);
-
         header = new BarraSuperior( "Aluno", false,
                 () -> { dispose(); new TelaLogin().setVisible(true); },
                 () -> { dispose(); new TelaPerfilAluno(this.aluno, false).setVisible(true); }
@@ -49,10 +70,8 @@ public class TelaHomeAluno extends BaseTela {
         labelTituloSecao.setFont(new Font("Arial", Font.BOLD, 18));
         labelTituloSecao.setForeground(new Color(30, 30, 30));
 
-        listaEditais = editalService.retornarEditais();
-
+        listaEditais = editalFacade.retornarEditais();
         tabelaEditais = new TabelaPadrao(new ModeloTabelaEdital(listaEditais));
-
         tabelaEditais.transformarColunaEmLink(4, new Color(0, 102, 204));
 
         scrollPane = new JScrollPane(tabelaEditais);
@@ -62,7 +81,6 @@ public class TelaHomeAluno extends BaseTela {
 
     @Override
     public void initListeners() {
-
         tabelaEditais.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -71,7 +89,6 @@ public class TelaHomeAluno extends BaseTela {
 
                 if (coluna == 4 && linha >= 0) {
                     dispose();
-
                     Edital editalSelecionado = listaEditais.get(linha);
                     StatusEdital status = editalSelecionado.getStatus();
 
@@ -90,10 +107,8 @@ public class TelaHomeAluno extends BaseTela {
     public void initLayout() {
         header.setBounds(0, 0, 600, 70);
         add(header);
-
         labelTituloSecao.setBounds(20, 100, 500, 30);
         add(labelTituloSecao);
-
         scrollPane.setBounds(20, 140, 540, 500);
         add(scrollPane);
     }

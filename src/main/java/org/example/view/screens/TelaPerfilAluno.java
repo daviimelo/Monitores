@@ -2,17 +2,10 @@ package org.example.view.screens;
 
 import org.example.exception.CampoInvalidoException;
 import org.example.exception.CampoVazioException;
-import org.example.interfaces.IAlunoRepository;
-import org.example.interfaces.ICoordenadorRepository;
-import org.example.interfaces.IInscricaoRepository;
+import org.example.facade.InscricaoFacade;
+import org.example.facade.UsuarioFacade;
 import org.example.model.Aluno;
 import org.example.model.Inscricao;
-import org.example.repository.AlunoRepository;
-import org.example.repository.CoordenadorRepository;
-import org.example.repository.InscricaoRepository;
-import org.example.service.AlunoService;
-import org.example.service.InscricaoService;
-import org.example.util.CalcularPontuacao;
 import org.example.validator.ComponentValidator;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoPrimario;
@@ -34,8 +27,10 @@ public class TelaPerfilAluno extends BaseTela {
 
     private Aluno aluno;
     private boolean isCoordenador;
-    private AlunoService alunoService;
-    private InscricaoService inscricaoService;
+
+    // Fachadas em vez de Services
+    private UsuarioFacade usuarioFacade;
+    private InscricaoFacade inscricaoFacade;
 
     private InputTexto campoNome, campoEmail, campoMatricula;
 
@@ -54,13 +49,9 @@ public class TelaPerfilAluno extends BaseTela {
         this.aluno = aluno;
         this.isCoordenador = isCoordenador;
 
-        IAlunoRepository alunoRepo = new AlunoRepository();
-        ICoordenadorRepository coordRepo = new CoordenadorRepository();
-
-        this.alunoService = new AlunoService(alunoRepo, coordRepo);
-
-        IInscricaoRepository incricaoRepo = new InscricaoRepository();
-        this.inscricaoService = new InscricaoService(incricaoRepo);
+        // Inicialização via Fachadas
+        this.usuarioFacade = new UsuarioFacade();
+        this.inscricaoFacade = new InscricaoFacade();
 
         initView();
         preencherDados();
@@ -113,22 +104,18 @@ public class TelaPerfilAluno extends BaseTela {
             campoMatricula.setText(aluno.getMatricula());
         }
 
-        List<Inscricao> listaAprovacoes = inscricaoService.retornarAprovacoesAluno(aluno);
+        List<Inscricao> listaAprovacoes = inscricaoFacade.buscarAprovacoesDoAluno(aluno);
         DateTimeFormatter formatadorData = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
         listaAprovacoes.forEach(e -> {
-            double pontuacao = CalcularPontuacao.calcularPontuacaoAluno(
-                    e.getDisciplina().getEdital().getPesoCre(),
-                    e.getDisciplina().getEdital().getPesoMedia(),
-                    e.getAlunoCRE(),
-                    e.getAlunoMedia()
-            );
+            // Chamada via Fachada
+            double pontuacao = inscricaoFacade.calcularPontuacao(e);
 
             Object[] linha = {
                     e.getDisciplina().getNomeDisciplina(),
                     String.valueOf(e.getResultadoInscricao()).toLowerCase(),
                     e.getDataInscricao().format(formatadorData),
-                    String.valueOf(pontuacao)
+                    String.format("%.2f", pontuacao)
             };
 
             modelHistorico.addRow(linha);
@@ -183,7 +170,8 @@ public class TelaPerfilAluno extends BaseTela {
                 aluno.setEmail(novoEmail);
                 aluno.setMatricula(novaMatricula);
 
-                alunoService.atualizarAluno(aluno);
+                // Chamada via Fachada
+                usuarioFacade.atualizarPerfilAluno(aluno);
 
                 JOptionPane.showMessageDialog(this, "Perfil atualizado com sucesso!");
                 alternarModoEdicao(false);

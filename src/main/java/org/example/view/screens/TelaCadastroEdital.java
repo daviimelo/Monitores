@@ -1,11 +1,9 @@
 package org.example.view.screens;
 
 import org.example.exception.*;
-import org.example.interfaces.IEditalRepository; // Importando a interface
-import org.example.repository.EditalRepository; // Importando o repositório concreto
+import org.example.facade.EditalFacade; // Importando a Fachada
 import org.example.model.Disciplina;
 import org.example.model.Edital;
-import org.example.service.EditalService;
 import org.example.validator.DisciplinaValidator;
 import org.example.validator.EditalValidator;
 import org.example.view.components.base.BaseTela;
@@ -59,15 +57,17 @@ public class TelaCadastroEdital extends BaseTela {
 
     private BotaoPrimario btnSalvar;
     private BotaoSecundario btnCancelar;
-    private EditalService editalService;
+
+    // Usando a Fachada em vez do Service
+    private EditalFacade editalFacade;
 
     private Edital edital;
 
     public TelaCadastroEdital() {
         super("Cadastro de Edital", 500, 600);
 
-        IEditalRepository editalRepo = new EditalRepository();
-        editalService = new EditalService(editalRepo);
+        // Inicializa a fachada
+        this.editalFacade = new EditalFacade();
 
         listaDisciplinas = new ArrayList<>();
         initView();
@@ -76,8 +76,8 @@ public class TelaCadastroEdital extends BaseTela {
     public TelaCadastroEdital(Edital edital) {
         super("Cadastro de Edital", 500, 600);
 
-        IEditalRepository editalRepo = new EditalRepository();
-        editalService = new EditalService(editalRepo);
+        // Inicializa a fachada de forma padronizada
+        this.editalFacade = new EditalFacade();
 
         listaDisciplinas = new ArrayList<>();
         this.edital = edital;
@@ -175,7 +175,7 @@ public class TelaCadastroEdital extends BaseTela {
 
         btnCancelar.addActionListener(e -> {
             dispose();
-            new TelaHomeCoordenador();
+            new TelaHomeCoordenador().setVisible(true);
         });
     }
 
@@ -222,12 +222,13 @@ public class TelaCadastroEdital extends BaseTela {
             EditalValidator.validarPeso(pesoMedia);
             EditalValidator.validarPesos(Float.parseFloat(pesoCre), Float.parseFloat(pesoMedia));
 
-            editalService.cadastrarEdital(dataInicio, dataFinal, Integer.parseInt(maxInscricoes),
+            // Chamada via Fachada
+            editalFacade.cadastrarEdital(dataInicio, dataFinal, Integer.parseInt(maxInscricoes),
                     Double.parseDouble(pesoCre), Double.parseDouble(pesoMedia), listaDisciplinas);
 
             JOptionPane.showMessageDialog(this, "Edital cadastrado com sucesso!");
             dispose();
-            new TelaHomeCoordenador();
+            new TelaHomeCoordenador().setVisible(true);
 
         } catch (DateTimeParseException ex) {
             JOptionPane.showMessageDialog(this, "Data inválida ou incompleta.", "Erro", JOptionPane.ERROR_MESSAGE);

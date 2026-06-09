@@ -1,11 +1,7 @@
 package org.example.view.screens;
 
 import org.example.exception.*;
-import org.example.interfaces.IAlunoRepository;
-import org.example.interfaces.ICoordenadorRepository;
-import org.example.repository.AlunoRepository;
-import org.example.repository.CoordenadorRepository;
-import org.example.service.AlunoService;
+import org.example.facade.UsuarioFacade; // Importando a Fachada
 import org.example.validator.ComponentValidator;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoPrimario;
@@ -29,15 +25,16 @@ public class TelaCadastroAluno extends BaseTela {
     private JPasswordField campoSenha;
     private BotaoPrimario btnCadastrar;
     private BotaoPrimario btnVoltar;
-    private AlunoService alunoService;
+
+    // Substituindo o Service pela Fachada
+    private UsuarioFacade usuarioFacade;
 
     public TelaCadastroAluno() {
         super("Cadastro de Aluno", 400, 500);
 
-        IAlunoRepository alunoRepo = new AlunoRepository();
-        ICoordenadorRepository coordRepo = new CoordenadorRepository();
+        // Inicializando a Fachada
+        this.usuarioFacade = new UsuarioFacade();
 
-        alunoService = new AlunoService(alunoRepo, coordRepo);
         initView();
     }
 
@@ -79,11 +76,12 @@ public class TelaCadastroAluno extends BaseTela {
                 ComponentValidator.validarMatricula(matricula);
                 ComponentValidator.validarSenha(senha);
 
-                alunoService.cadastrarAluno(email, senha, matricula, nome);
+                // Chamada via Fachada
+                usuarioFacade.cadastrarAluno(email, senha, matricula, nome);
 
                 JOptionPane.showMessageDialog(this, "Cadastro realizado com sucesso!");
                 dispose();
-                new TelaLogin();
+                new TelaLogin().setVisible(true);
 
             } catch (CampoInvalidoException | CampoVazioException | CampoTamanhoInvalidoException |
                      UsuarioJaExisteException exception) {
@@ -93,7 +91,7 @@ public class TelaCadastroAluno extends BaseTela {
 
         btnVoltar.addActionListener(e -> {
             dispose();
-            new TelaLogin();
+            new TelaLogin().setVisible(true);
         });
     }
 

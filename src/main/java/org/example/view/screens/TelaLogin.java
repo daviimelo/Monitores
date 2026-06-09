@@ -1,14 +1,9 @@
 package org.example.view.screens;
 
 import org.example.enums.TipoPerfil;
-import org.example.interfaces.IAlunoRepository;
-import org.example.interfaces.ICoordenadorRepository;
+import org.example.facade.AuthFacade;
 import org.example.interfaces.UsuarioAutenticavel;
 import org.example.model.Aluno;
-import org.example.model.Coordenador;
-import org.example.repository.AlunoRepository;
-import org.example.repository.CoordenadorRepository;
-import org.example.service.LoginService;
 import org.example.view.components.base.BaseTela;
 import org.example.view.components.buttons.BotaoPrimario;
 import org.example.view.components.input.InputSenha;
@@ -30,30 +25,27 @@ public class TelaLogin extends BaseTela {
     private InputSenha campoSenha;
     private BotaoPrimario btnEntrar;
     private LinkTexto rotaCadastroAluno;
-    private LoginService loginService;
+
+    // Agora usamos a Fachada de Autenticação
+    private AuthFacade authFacade;
 
     public TelaLogin() {
         super("Login", 400, 500);
 
-        IAlunoRepository alunoRepo = new AlunoRepository();
-        ICoordenadorRepository coordRepo = new CoordenadorRepository();
+        // Inicializa a fachada
+        this.authFacade = new AuthFacade();
 
-        loginService = new LoginService(alunoRepo, coordRepo);
         initView();
     }
 
     @Override
     public void initComponents() {
         labelTitulo = new LabelTitulo("Login");
-
         labelEmail = new LabelTexto("Email:");
         labelSenha = new LabelTexto("Senha:");
-
         campoEmail = new InputTexto();
         campoSenha = new InputSenha();
-
         btnEntrar = new BotaoPrimario("Logar");
-
         rotaCadastroAluno = new LinkTexto("Clique aqui se você ainda não tem uma conta", SwingConstants.RIGHT);
     }
 
@@ -63,20 +55,19 @@ public class TelaLogin extends BaseTela {
             String email = campoEmail.getText();
             String senha = new String(campoSenha.getPassword());
 
-            UsuarioAutenticavel usuario = loginService.fazerLogin(email, senha);
+            // Chamada via Fachada
+            UsuarioAutenticavel usuario = authFacade.fazerLogin(email, senha);
 
             if (usuario == null) {
                 JOptionPane.showMessageDialog(this, "Email ou senha inválidos, tente novamente!");
             }
-            // 3. ADEUS INSTANCEOF! Agora verificamos o perfil pelo Enum
             else if (usuario.getTipoPerfil() == TipoPerfil.ALUNO) {
                 dispose();
-                // Fazemos o cast seguro apenas na hora de passar para a tela
-                new TelaHomeAluno((Aluno) usuario);
+                new TelaHomeAluno((Aluno) usuario).setVisible(true);
             }
             else if (usuario.getTipoPerfil() == TipoPerfil.COORDENADOR) {
                 dispose();
-                new TelaHomeCoordenador();
+                new TelaHomeCoordenador().setVisible(true);
             }
         });
 
@@ -84,7 +75,7 @@ public class TelaLogin extends BaseTela {
             @Override
             public void mouseClicked(MouseEvent e) {
                 dispose();
-                new TelaCadastroAluno();
+                new TelaCadastroAluno().setVisible(true);
             }
         });
     }

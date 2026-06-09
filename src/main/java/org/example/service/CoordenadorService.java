@@ -40,4 +40,8 @@ public class CoordenadorService {
 
         coordenadorRepository.salvar(coordenadorNovo);
     }
+
+    public boolean existeCoordenadorCadastrado() {
+        return coordenadorRepository.verificarSeTemRegistro();
+    }
 }
